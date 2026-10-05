@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "subject": "Chemistry",
+  "year": 2024,
+  "questions": [
+    {
+      "topic": "Atomic Structure",
+      "subtopic": "Atoms and Molecules",
+      "questionNumber": 1,
+      "questionText": "Which particle is found in the nucleus of an atom?",
+      "options": {
+        "A": "Electron",
+        "B": "Proton",
+        "C": "Neutron",
+        "D": "Photon"
+      },
+      "correctAnswer": "B",
+      "explanation": "Protons are located in the nucleus; electrons orbit around it.",
+      "difficulty": "medium",
+      "questionType": "TEXT",
+      "source": "Question Bank",
+      "isActive": true
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "subject": "Biology",
+  "year": 2024,
+  "questions": [
+    {
+      "topic": "Cell Biology",
+      "subtopic": "Cell Organelles",
+      "questionNumber": 1,
+      "questionText": "Which organelle is responsible for energy production in a cell?",
+      "options": {
+        "A": "Ribosome",
+        "B": "Mitochondrion",
+        "C": "Nucleus",
+        "D": "Golgi apparatus"
+      },
+      "correctAnswer": "B",
+      "explanation": "The mitochondrion produces ATP, which provides usable energy for cellular activities.",
+      "difficulty": "medium",
+      "questionType": "TEXT",
+      "source": "Question Bank",
+      "isActive": true
+    },
+    {
+      "topic": "Cell Biology",
+      "subtopic": "Cell Organelles",
+      "questionNumber": 2,
+      "questionText": "Which structure controls the activities of a living cell?",
+      "options": {
+        "A": "Cell membrane",
+        "B": "Nucleus",
+        "C": "Cytoplasm",
+        "D": "Cell wall"
+      },
+      "correctAnswer": "B",
+      "explanation": "The nucleus controls cell activities and stores genetic information.",
+      "difficulty": "easy",
+      "questionType": "TEXT",
+      "source": "Question Bank",
+      "isActive": true
+    }
+  ]
+}

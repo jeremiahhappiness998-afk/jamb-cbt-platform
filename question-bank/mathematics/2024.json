@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "subject": "Mathematics",
+  "year": 2024,
+  "questions": [
+    {
+      "topic": "Algebra",
+      "subtopic": "Equations",
+      "questionNumber": 1,
+      "questionText": "Solve for x: 2x + 5 = 15",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correctAnswer": "C",
+      "explanation": "2x = 10, so x = 5.",
+      "difficulty": "easy",
+      "questionType": "TEXT",
+      "source": "Question Bank",
+      "isActive": true
+    }
+  ]
+}

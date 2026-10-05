@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "subject": "Physics",
+  "year": 2024,
+  "questions": [
+    {
+      "topic": "Motion",
+      "subtopic": "Velocity and Acceleration",
+      "questionNumber": 1,
+      "questionText": "The rate of change of velocity with time is called ________.",
+      "options": {
+        "A": "Velocity",
+        "B": "Acceleration",
+        "C": "Displacement",
+        "D": "Speed"
+      },
+      "correctAnswer": "B",
+      "explanation": "Acceleration is the rate of change of velocity with time.",
+      "difficulty": "medium",
+      "questionType": "TEXT",
+      "source": "Question Bank",
+      "isActive": true
+    }
+  ]
+}

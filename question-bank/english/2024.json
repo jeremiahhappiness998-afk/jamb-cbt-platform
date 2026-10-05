@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "subject": "Use of English",
+  "year": 2024,
+  "questions": [
+    {
+      "topic": "Lexis and Structure",
+      "subtopic": "Vocabulary",
+      "questionNumber": 1,
+      "questionText": "Choose the correct synonym for 'vivid'.",
+      "options": {
+        "A": "Dull",
+        "B": "Bright",
+        "C": "Silent",
+        "D": "Slow"
+      },
+      "correctAnswer": "B",
+      "explanation": "'Vivid' means bright or lively; it is closest in meaning to 'bright'.",
+      "difficulty": "easy",
+      "questionType": "TEXT",
+      "source": "Question Bank",
+      "isActive": true
+    }
+  ]
+}
