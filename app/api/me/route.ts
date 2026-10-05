@@ -1,15 +1,21 @@
-import { NextResponse } from 'next/server';
-import { getSessionUser } from '@/lib/session';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
-  const user = await getSessionUser();
+const protectedPaths = ['/dashboard', '/practice', '/simulation', '/results', '/admin'];
 
-  if (!user) {
-    return NextResponse.json({ authenticated: false }, { status: 401 });
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const hasAuthCookie = Boolean(request.cookies.get('auth_token')?.value);
+
+  const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
+  if (isProtected && !hasAuthCookie) {
+    const loginUrl = new URL('/login', request.url);
+    return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.json({
-    authenticated: true,
-    user,
-  });
+  return NextResponse.next();
 }
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/practice/:path*', '/simulation/:path*', '/results/:path*', '/admin/:path*'],
+};

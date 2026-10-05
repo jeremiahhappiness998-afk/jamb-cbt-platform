@@ -1,47 +1,42 @@
-import { normalizeQuestion } from './question-parser';
-import { validateQuestion } from './question-validator';
-import { deduplicateQuestions } from './question-deduplicator';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { verifyToken } from '@/lib/auth';
 
-export type QuestionFileRecord = {
-  subject: string;
-  topic: string;
-  subtopic?: string;
-  year: number;
-  questionNumber: number;
-  questionText: string;
-  options: { A: string; B: string; C: string; D: string };
-  correctAnswer: 'A' | 'B' | 'C' | 'D';
-  explanation?: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  questionType?: 'TEXT' | 'IMAGE' | 'TEXT_WITH_IMAGE';
-  source?: string;
-  isActive?: boolean;
-};
+export async function GET(request: NextRequest) {
+  const token = request.cookies.get('auth_token')?.value;
+  const userPayload = token ? await verifyToken(token) : null;
 
-export function importQuestionsFromJson(raw: unknown) {
-  const rawObject = raw as any;
-  const questions = Array.isArray(rawObject?.questions) ? rawObject.questions : [];
-
-  const valid: any[] = [];
-  const failed: any[] = [];
-
-  for (const question of questions) {
-    const errors = validateQuestion(question);
-    if (errors.length > 0) {
-      failed.push({ question, errors });
-      continue;
-    }
-    valid.push(normalizeQuestion(question));
+  if (!userPayload || !userPayload.sub) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const deduped = deduplicateQuestions(valid);
+  const exam = await prisma.exam.findFirst({
+    where: { userId: String(userPayload.sub) },
+    orderBy: { createdAt: 'desc' },
+  });
 
-  return {
-    total: questions.length,
-    valid: deduped.length,
-    duplicates: valid.length - deduped.length,
-    failed: failed.length,
-    results: deduped,
-    errors: failed,
-  };
+  if (!exam) {
+    return NextResponse.json({ error: 'No exam found' }, { status: 404 });
+  }
+
+  const answers = await prisma.attemptAnswer.findMany({
+    where: { attemptId: `exam:${exam.id}` },
+  });
+
+  const correct = answers.filter((answer) => answer.isCorrect).length;
+  const wrong = answers.filter((answer) => answer.selectedOption && answer.isCorrect === false).length;
+  const unanswered = Math.max((exam.totalQuestions || 0) - answers.length, 0);
+
+  return NextResponse.json({
+    success: true,
+    result: {
+      examId: exam.id,
+      totalQuestions: exam.totalQuestions,
+      correct,
+      wrong,
+      unanswered,
+      percentage: exam.totalQuestions > 0 ? Math.round((correct / exam.totalQuestions) * 100) : 0,
+      status: exam.status,
+    },
+  });
 }

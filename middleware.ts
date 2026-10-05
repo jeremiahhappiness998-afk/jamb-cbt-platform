@@ -1,21 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { prisma } from './db';
+import { verifyToken } from './auth';
 
-const protectedPaths = ['/dashboard', '/practice', '/simulation', '/results', '/admin'];
+export async function getSessionUser() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth_token')?.value;
+  if (!token) return null;
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const hasAuthCookie = Boolean(request.cookies.get('auth_token')?.value);
+  const payload = await verifyToken(token);
+  if (!payload || !payload.sub) return null;
 
-  const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const user = await prisma.user.findUnique({ where: { id: String(payload.sub) } });
+  if (!user) return null;
 
-  if (isProtected && !hasAuthCookie) {
-    const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
 }
 
-export const config = {
-  matcher: ['/dashboard/:path*', '/practice/:path*', '/simulation/:path*', '/results/:path*', '/admin/:path*'],
-};
+export async function requireSessionUser() {
+  const user = await getSessionUser();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+  return user;
+}

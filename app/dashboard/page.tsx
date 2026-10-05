@@ -1,68 +1,95 @@
-const stats = [
-  { label: 'Questions Answered', value: '486' },
-  { label: 'Average Score', value: '74%' },
-  { label: 'Exams Completed', value: '12' },
-  { label: 'Study Streak', value: '8 days' },
-];
+"use client";
 
-const subjects = [
-  ['Biology', '82%'],
-  ['Chemistry', '71%'],
-  ['Physics', '69%'],
-  ['Mathematics', '78%'],
-];
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function DashboardPage() {
+export default function RegisterPage() {
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError('');
+
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      setError(data.error || 'Registration failed.');
+      setLoading(false);
+      return;
+    }
+
+    router.push('/dashboard');
+    router.refresh();
+  }
+
   return (
-    <main className="page-shell">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-emerald-700">Welcome back</p>
-          <h1 className="text-3xl font-bold text-slate-900">Continue your preparation.</h1>
+    <main className="page-shell flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-md card p-8">
+        <div className="mb-6 text-center">
+          <div className="text-3xl font-bold text-slate-900">Create account</div>
+          <p className="mt-2 text-sm text-slate-600">Start preparing for JAMB with structured practice</p>
         </div>
-        <div className="flex gap-3">
-          <a href="/practice" className="btn btn-primary">START PRACTICE</a>
-          <a href="/simulation" className="btn btn-secondary">START CBT SIMULATION</a>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">Full name</label>
+            <input
+              className="w-full rounded-lg border border-slate-300 p-3"
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="John Doe"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
+            <input
+              className="w-full rounded-lg border border-slate-300 p-3"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="student@example.com"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">Password</label>
+            <input
+              className="w-full rounded-lg border border-slate-300 p-3"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
+
+          <button className="btn btn-primary w-full" type="submit" disabled={loading}>
+            {loading ? 'Creating account...' : 'Register'}
+          </button>
+        </form>
+
+        <div className="mt-4 text-center text-sm text-slate-600">
+          Already have an account? <a href="/login" className="font-semibold text-emerald-700">Login</a>
         </div>
       </div>
-
-      <section className="grid gap-5 md:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="card p-5">
-            <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-            <div className="mt-1 text-sm text-slate-600">{stat.label}</div>
-          </div>
-        ))}
-      </section>
-
-      <section className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="card p-6">
-          <h2 className="text-xl font-bold text-slate-900">Recent performance</h2>
-          <div className="mt-5 space-y-4">
-            {subjects.map(([subject, score]) => (
-              <div key={subject}>
-                <div className="mb-1 flex justify-between text-sm text-slate-700">
-                  <span>{subject}</span>
-                  <span>{score}</span>
-                </div>
-                <div className="h-2 rounded-full bg-slate-200">
-                  <div className="h-full rounded-full bg-emerald-700" style={{ width: score }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card p-6">
-          <h2 className="text-xl font-bold text-slate-900">Recommended practice</h2>
-          <div className="mt-4 rounded-xl bg-emerald-50 p-4">
-            <div className="text-xs uppercase tracking-[0.2em] text-emerald-700">Ecology</div>
-            <div className="mt-2 text-2xl font-bold text-slate-900">15 questions</div>
-            <p className="mt-2 text-sm text-slate-600">Your ecology performance is still below your other Biology topics.</p>
-          </div>
-          <a href="/practice" className="btn btn-primary mt-5 w-full">PRACTICE NOW</a>
-        </div>
-      </section>
     </main>
   );
 }
