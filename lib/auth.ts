@@ -1,22 +1,47 @@
-import { createSecretKey } from 'crypto';
-import { SignJWT, jwtVerify } from 'jose';
+import { normalizeQuestion } from './question-parser';
+import { validateQuestion } from './question-validator';
+import { deduplicateQuestions } from './question-deduplicator';
 
-export const authSecret = process.env.AUTH_SECRET || 'development-secret';
-export const secretKey = createSecretKey(Buffer.from(authSecret));
+export type QuestionFileRecord = {
+  subject: string;
+  topic: string;
+  subtopic?: string;
+  year: number;
+  questionNumber: number;
+  questionText: string;
+  options: { A: string; B: string; C: string; D: string };
+  correctAnswer: 'A' | 'B' | 'C' | 'D';
+  explanation?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  questionType?: 'TEXT' | 'IMAGE' | 'TEXT_WITH_IMAGE';
+  source?: string;
+  isActive?: boolean;
+};
 
-export async function signToken(payload: Record<string, unknown>) {
-  return await new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('7d')
-    .sign(secretKey);
-}
+export function importQuestionsFromJson(raw: unknown) {
+  const rawObject = raw as any;
+  const questions = Array.isArray(rawObject?.questions) ? rawObject.questions : [];
 
-export async function verifyToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, secretKey);
-    return payload;
-  } catch {
-    return null;
+  const valid: any[] = [];
+  const failed: any[] = [];
+
+  for (const question of questions) {
+    const errors = validateQuestion(question);
+    if (errors.length > 0) {
+      failed.push({ question, errors });
+      continue;
+    }
+    valid.push(normalizeQuestion(question));
   }
+
+  const deduped = deduplicateQuestions(valid);
+
+  return {
+    total: questions.length,
+    valid: deduped.length,
+    duplicates: valid.length - deduped.length,
+    failed: failed.length,
+    results: deduped,
+    errors: failed,
+  };
 }

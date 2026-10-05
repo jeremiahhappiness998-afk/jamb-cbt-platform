@@ -1,18 +1,29 @@
-export function normalizeForDuplicateCheck(value: string) {
-  return value.toLowerCase().replace(/\s+/g, ' ').trim();
-}
+export function validateQuestion(question: any) {
+  const errors: string[] = [];
 
-export function deduplicateQuestions(questions: any[]) {
-  const seen = new Map<string, any>();
-  const unique: any[] = [];
-
-  for (const question of questions) {
-    const key = `${normalizeForDuplicateCheck(question.subject || '')}|${question.year ?? ''}|${question.questionNumber ?? ''}|${normalizeForDuplicateCheck(question.questionText || '')}`;
-    if (!seen.has(key)) {
-      seen.set(key, question);
-      unique.push(question);
-    }
+  if (!question?.questionText || !String(question.questionText).trim()) {
+    errors.push('Missing questionText');
   }
 
-  return unique;
+  if (!question?.options || !['A', 'B', 'C', 'D'].every((key) => typeof question.options[key] === 'string' && question.options[key].trim().length > 0)) {
+    errors.push('Options object must contain non-empty A/B/C/D values');
+  }
+
+  if (!['A', 'B', 'C', 'D'].includes(question?.correctAnswer)) {
+    errors.push('Invalid correctAnswer');
+  }
+
+  if (!['easy', 'medium', 'hard'].includes(question?.difficulty ?? 'medium')) {
+    errors.push('Invalid difficulty');
+  }
+
+  if (!question?.subject || !String(question.subject).trim()) {
+    errors.push('Missing subject');
+  }
+
+  if (!question?.topic || !String(question.topic).trim()) {
+    errors.push('Missing topic');
+  }
+
+  return errors;
 }

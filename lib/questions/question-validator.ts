@@ -1,16 +1,26 @@
-export function validateQuestion(question: any) {
-  const errors: string[] = [];
-  if (!question?.questionText || !String(question.questionText).trim()) {
-    errors.push('Missing questionText');
+import { QuestionImport, questionFileSchema } from './question-schema';
+
+export function parseQuestionFile(raw: unknown) {
+  const parsed = questionFileSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false as const, errors: parsed.error.issues.map((issue) => issue.message) };
   }
-  if (!question?.options || !['A', 'B', 'C', 'D'].every((key) => typeof question.options[key] === 'string')) {
-    errors.push('Invalid options object');
-  }
-  if (!['A', 'B', 'C', 'D'].includes(question?.correctAnswer)) {
-    errors.push('Invalid correctAnswer');
-  }
-  if (!['easy', 'medium', 'hard'].includes(question?.difficulty ?? 'medium')) {
-    errors.push('Invalid difficulty');
-  }
-  return errors;
+  return { success: true as const, data: parsed.data };
+}
+
+export function normalizeQuestion(question: QuestionImport): QuestionImport {
+  const normalized: QuestionImport = {
+    ...question,
+    subject: question.subject.trim(),
+    topic: question.topic.trim(),
+    subtopic: question.subtopic?.trim(),
+    questionText: question.questionText.trim().replace(/\s+/g, ' '),
+    explanation: question.explanation?.trim(),
+    difficulty: question.difficulty ?? 'medium',
+    questionType: question.questionType ?? 'TEXT',
+    source: question.source ?? 'Question Bank',
+    isActive: question.isActive ?? true,
+  };
+
+  return normalized;
 }
