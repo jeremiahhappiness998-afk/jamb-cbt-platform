@@ -1,58 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { parseQuestionFile, normalizeQuestion } from '@/lib/questions/question-parser';
-import { validateQuestion } from '@/lib/questions/question-validator';
-import { deduplicateQuestions } from '@/lib/questions/question-deduplicator';
+import { z } from 'zod';
 
-export async function POST(request: NextRequest) {
-  const token = request.cookies.get('auth_token')?.value;
-  const userPayload = token ? await verifyToken(token) : null;
+export const answerOptionSchema = z.enum(['A', 'B', 'C', 'D']);
+export const questionTypeSchema = z.enum(['TEXT', 'IMAGE', 'TEXT_WITH_IMAGE']);
+export const difficultySchema = z.enum(['easy', 'medium', 'hard']);
 
-  if (!userPayload || !userPayload.sub) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export const questionImportSchema = z.object({
+  subject: z.string().min(1, 'Subject is required'),
+  topic: z.string().min(1, 'Topic is required'),
+  subtopic: z.string().optional(),
+  year: z.number().int('Year must be an integer'),
+  questionNumber: z.number().int('Question number must be an integer'),
+  questionText: z.string().min(1, 'Question text is required'),
+  options: z.object({
+    A: z.string().min(1, 'Option A is required'),
+    B: z.string().min(1, 'Option B is required'),
+    C: z.string().min(1, 'Option C is required'),
+    D: z.string().min(1, 'Option D is required'),
+  }),
+  correctAnswer: answerOptionSchema,
+  explanation: z.string().optional(),
+  difficulty: difficultySchema.default('medium'),
+  questionType: questionTypeSchema.default('TEXT'),
+  source: z.string().optional(),
+  isActive: z.boolean().default(true),
+  image: z
+    .object({
+      path: z.string(),
+      alt: z.string().optional(),
+    })
+    .optional(),
+});
 
-  const user = await prisma.user.findUnique({ where: { id: String(userPayload.sub) } });
-  if (!user || user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden: admin role required' }, { status: 403 });
-  }
+export const questionFileSchema = z.object({
+  version: z.string().optional(),
+  subject: z.string().min(1, 'Subject is required'),
+  year: z.number().int('Year must be an integer'),
+  questions: z.array(questionImportSchema).min(1, 'At least one question is required'),
+});
 
-  try {
-    const raw = await request.json();
-    const parsed = parseQuestionFile(raw);
-
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid question file', details: parsed.errors }, { status: 400 });
-    }
-
-    const validQuestions = [] as any[];
-    const failedQuestions = [] as any[];
-
-    for (const question of parsed.data.questions) {
-      const errors = validateQuestion(question);
-      if (errors.length > 0) {
-        failedQuestions.push({ question, errors });
-        continue;
-      }
-      validQuestions.push(normalizeQuestion(question));
-    }
-
-    const deduplicated = deduplicateQuestions(validQuestions);
-
-    return NextResponse.json({
-      success: true,
-      summary: {
-        total: parsed.data.questions.length,
-        valid: deduplicated.length,
-        duplicates: validQuestions.length - deduplicated.length,
-        failed: failedQuestions.length,
-      },
-      duplicates: validQuestions.filter((question) => !deduplicated.some((item) => JSON.stringify(item) === JSON.stringify(question))),
-      failed: failedQuestions,
-      valid: deduplicated,
-    });
-  } catch (error) {
-    return NextResponse.json({ error: 'Question import failed', details: String(error) }, { status: 500 });
-  }
-}
+export type QuestionImport = z.infer<typeof questionImportSchema>;
+export type QuestionFile = z.infer<typeof questionFileSchema>;

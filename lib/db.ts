@@ -1,22 +1,15 @@
-import { createSecretKey } from 'crypto';
-import { SignJWT, jwtVerify } from 'jose';
+import { PrismaClient } from '@prisma/client';
 
-const authSecret = process.env.AUTH_SECRET || 'development-secret';
-const secretKey = createSecretKey(Buffer.from(authSecret));
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient;
+};
 
-export async function signToken(payload: Record<string, unknown>) {
-  return await new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('7d')
-    .sign(secretKey);
-}
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  });
 
-export async function verifyToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, secretKey);
-    return payload;
-  } catch {
-    return null;
-  }
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
 }

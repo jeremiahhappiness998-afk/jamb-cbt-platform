@@ -1,42 +1,71 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
+import { createSecretKey } from 'crypto';
+import { SignJWT, jwtVerify } from 'jose';
+import { cookies } from 'next/headers';
+import { prisma } from './db';
 
-export async function GET(request: NextRequest) {
-  const token = request.cookies.get('auth_token')?.value;
-  const userPayload = token ? await verifyToken(token) : null;
-
-  if (!userPayload || !userPayload.sub) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+const getAuthSecret = () => {
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) {
+    throw new Error(
+      'AUTH_SECRET environment variable is not set. '
+      + 'Please set it in your .env.local file.'
+    );
   }
+  return secret;
+};
 
-  const exam = await prisma.exam.findFirst({
-    where: { userId: String(userPayload.sub) },
-    orderBy: { createdAt: 'desc' },
-  });
+const secretKey = createSecretKey(Buffer.from(getAuthSecret()));
 
-  if (!exam) {
-    return NextResponse.json({ error: 'No exam found' }, { status: 404 });
+export async function signToken(payload: Record<string, unknown>) {
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(secretKey);
+}
+
+export async function verifyToken(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, secretKey);
+    return payload;
+  } catch {
+    return null;
   }
+}
 
-  const answers = await prisma.attemptAnswer.findMany({
-    where: { attemptId: `exam:${exam.id}` },
-  });
+export async function getCurrentUser() {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth_token')?.value;
+    if (!token) return null;
 
-  const correct = answers.filter((answer) => answer.isCorrect).length;
-  const wrong = answers.filter((answer) => answer.selectedOption && answer.isCorrect === false).length;
-  const unanswered = Math.max((exam.totalQuestions || 0) - answers.length, 0);
+    const payload = await verifyToken(token);
+    if (!payload || !payload.sub) return null;
 
-  return NextResponse.json({
-    success: true,
-    result: {
-      examId: exam.id,
-      totalQuestions: exam.totalQuestions,
-      correct,
-      wrong,
-      unanswered,
-      percentage: exam.totalQuestions > 0 ? Math.round((correct / exam.totalQuestions) * 100) : 0,
-      status: exam.status,
-    },
-  });
+    const user = await prisma.user.findUnique({
+      where: { id: String(payload.sub) },
+      select: { id: true, name: true, email: true, role: true },
+    });
+    if (!user) return null;
+
+    return user;
+  } catch {
+    return null;
+  }
+}
+
+export async function requireAuth() {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+  return user;
+}
+
+export async function requireAdmin() {
+  const user = await requireAuth();
+  if (user.role !== 'ADMIN') {
+    throw new Error('Forbidden: admin role required');
+  }
+  return user;
 }

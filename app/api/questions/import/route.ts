@@ -1,46 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { getCurrentUser, requireAdmin } from '@/lib/auth';
+import { importQuestionsFromFile } from '@/lib/questions/question-importer';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const token = request.cookies.get('auth_token')?.value;
-  const userPayload = token ? await verifyToken(token) : null;
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  if (!userPayload || !userPayload.sub) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: admin role required' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const result = importQuestionsFromFile(body);
+
+    return NextResponse.json({
+      success: true,
+      summary: {
+        total: result.total,
+        valid: result.valid,
+        duplicates: result.duplicates,
+        failed: result.failed,
+      },
+      details: {
+        validQuestions: result.validQuestions,
+        failedQuestions: result.failedQuestions,
+        duplicateQuestions: result.duplicateQuestions,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Question import failed', message: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
-
-  const exam = await prisma.exam.findUnique({ where: { id: params.id } });
-  if (!exam) {
-    return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
-  }
-
-  if (exam.userId !== String(userPayload.sub)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const answers = await prisma.attemptAnswer.findMany({
-    where: { attemptId: `exam:${exam.id}` },
-    include: { question: true },
-  });
-
-  const correct = answers.filter((a) => a.isCorrect).length;
-  const wrong = answers.filter((a) => a.selectedOption && a.isCorrect === false).length;
-  const unanswered = Math.max((exam.totalQuestions || 0) - answers.length, 0);
-
-  return NextResponse.json({
-    success: true,
-    result: {
-      examId: exam.id,
-      score: exam.score ?? 0,
-      totalQuestions: exam.totalQuestions,
-      correct,
-      wrong,
-      unanswered,
-      percentage: exam.totalQuestions > 0 ? Math.round((correct / exam.totalQuestions) * 100) : 0,
-      status: exam.status,
-      startedAt: exam.startedAt,
-      endedAt: exam.endedAt,
-    },
-  });
 }
