@@ -1,0 +1,18 @@
+{
+  "name": "JAMB CBT Platform",
+  "short_name": "JAMB CBT",
+  "description": "Offline-first CBT practice and exam simulator for JAMB/UTME preparation.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

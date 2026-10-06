@@ -9,6 +9,23 @@ A production-minded JAMB/UTME preparation platform with:
 - Server-side exam integrity
 - Performance analytics
 
+## Architecture update
+
+This project now follows a keyboard-first, offline-capable CBT architecture aligned to exam-day reliability:
+
+- Offline-first shell: the app can install as a PWA and keep its core UI available when connectivity is intermittent.
+- Keyboard-first exam experience: answer selection and navigation are designed to work without a mouse, using predictable focus states and keyboard shortcuts.
+- Progressive web app support: manifest metadata, installability, and a service worker support a native-app-like experience on desktop and mobile.
+- Local-first question flow: reusable question models and import validation keep the exam logic deterministic and resilient even when network conditions change.
+
+## Key files
+
+- `app/layout.tsx` — app metadata and PWA registration hook
+- `components/pwa-register.tsx` — client-side registration of the service worker
+- `public/manifest.webmanifest` — installable app manifest
+- `public/sw.js` — offline caching for core assets and fallback handling
+- `public/offline.html` — offline page shown when the network is unavailable
+
 ## Stack
 - Next.js
 - TypeScript

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="JAMB CBT Platform icon">
+  <rect width="256" height="256" rx="48" fill="#0f172a" />
+  <rect x="32" y="32" width="192" height="192" rx="32" fill="#10b981" opacity="0.95"/>
+  <path d="M166 68H108c-11.046 0-20 8.954-20 20v84c0 11.046 8.954 20 20 20h58c11.046 0 20-8.954 20-20v-16h-24v12H108V88h58v12h24V88c0-11.046-8.954-20-20-20Z" fill="#f8fafc" />
+  <path d="M120 146h40v24h-40z" fill="#dcfce7"/>
+</svg>
