@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     const topicFilter = body.topic ? String(body.topic) : undefined;
     const yearFilter = body.year ? Number(body.year) : undefined;
 
-    const where: any = { isActive: true };
+    const where: Prisma.QuestionWhereInput = { isActive: true };
     if (subjectFilter) {
       const subject = await prisma.subject.findFirst({ where: { name: subjectFilter } });
       if (!subject) {

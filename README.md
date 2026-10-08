@@ -30,25 +30,24 @@ This project now follows a keyboard-first, offline-capable CBT architecture alig
 - Next.js
 - TypeScript
 - Tailwind CSS
-- Prisma + PostgreSQL
+- Prisma + SQLite (local)
 - Zod validation
 - bcryptjs + JWT session cookies
 
 ## Local setup
 1. Install dependencies: `npm install`
-2. Create a PostgreSQL database and update `DATABASE_URL` in `.env.local`
-3. Run: `npx prisma generate`
-4. Run: `npx prisma db push`
-5. Run: `npm run dev`
+2. Copy `.env.example` to `.env` (the default database is `prisma/dev.db`)
+3. Run: `npx prisma format`
+4. Run: `npx prisma validate`
+5. Run: `npx prisma generate`
+6. Run: `npx prisma db push`
+7. Run: `npm run prisma:seed` to import the canonical JSON question bank
+8. Run: `npm run dev`
 
 ## Environment
-Copy `.env.example` to `.env.local` and configure:
+Copy `.env.example` to `.env`. A local development auth key is generated for the lifetime of the server process; sessions expire when the server restarts. Production deployments must configure a stable `AUTH_SECRET`.
 
-```bash
-DATABASE_URL="postgresql://user:password@localhost:5432/jamb_cbt"
-AUTH_SECRET="replace-with-secure-secret"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-```
+The local database URL is `DATABASE_URL="file:./dev.db"`; Prisma resolves this path relative to `prisma/schema.prisma`.
 
 ## Prisma commands
 - `npx prisma generate`
@@ -57,8 +56,7 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 - `npx prisma migrate dev`
 
 ## Seed data
-- `npx prisma db push`
-- `npx ts-node prisma/seed.ts`
+- `npm run prisma:seed` imports validated JSON question-bank files into SQLite and can be run repeatedly.
 
 ## Question bank
 The source question data lives in `question-bank/` and follows the canonical JSON schema.
@@ -88,7 +86,7 @@ Example:
 ```
 
 ## Importing data
-Use the admin import panel or the API route `/api/questions/import` with a JSON or CSV file.
+The files in `question-bank/` are the canonical source dataset. Run `npm run prisma:seed` to validate and import them locally. The admin API currently validates uploads but does not persist them.
 
 ## Scripts
 - `npm run dev` — start dev server

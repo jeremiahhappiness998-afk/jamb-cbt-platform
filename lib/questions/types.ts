@@ -1,8 +1,9 @@
+import type { QuestionBankRecord, QuestionImport, QuestionFile } from './question-schema';
+
 export type QuestionFileRecord = {
-  subject: string;
+  id?: string;
   topic: string;
   subtopic?: string;
-  year: number;
   questionNumber: number;
   questionText: string;
   options: { A: string; B: string; C: string; D: string };
@@ -14,11 +15,15 @@ export type QuestionFileRecord = {
   isActive?: boolean;
 };
 
+export type QuestionBankFile = Pick<QuestionFile, 'version' | 'subject' | 'year'> & {
+  questions: QuestionBankRecord[];
+};
+
 export type ImportSummary = {
   total: number;
   valid: number;
   duplicates: number;
   failed: number;
-  results: QuestionFileRecord[];
-  errors: Array<{ question: any; errors: string[] }>;
+  results: QuestionImport[];
+  errors: Array<{ question: QuestionFileRecord; errors: string[] }>;
 };

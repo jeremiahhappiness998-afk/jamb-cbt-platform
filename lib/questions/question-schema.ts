@@ -5,10 +5,9 @@ export const questionTypeSchema = z.enum(['TEXT', 'IMAGE', 'TEXT_WITH_IMAGE']);
 export const difficultySchema = z.enum(['easy', 'medium', 'hard']);
 
 export const questionImportSchema = z.object({
-  subject: z.string().min(1, 'Subject is required'),
+  id: z.string().optional(),
   topic: z.string().min(1, 'Topic is required'),
   subtopic: z.string().optional(),
-  year: z.number().int('Year must be an integer'),
   questionNumber: z.number().int('Question number must be an integer'),
   questionText: z.string().min(1, 'Question text is required'),
   options: z.object({
@@ -38,5 +37,6 @@ export const questionFileSchema = z.object({
   questions: z.array(questionImportSchema).min(1, 'At least one question is required'),
 });
 
-export type QuestionImport = z.infer<typeof questionImportSchema>;
+export type QuestionBankRecord = z.infer<typeof questionImportSchema>;
 export type QuestionFile = z.infer<typeof questionFileSchema>;
+export type QuestionImport = QuestionBankRecord & Pick<QuestionFile, 'subject' | 'year'>;

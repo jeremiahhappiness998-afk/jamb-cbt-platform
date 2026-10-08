@@ -1,11 +1,11 @@
-import { QuestionImport } from './question-schema';
+import type { QuestionImport } from './question-schema';
 
 export interface ValidationError {
   field: string;
   message: string;
 }
 
-export function validateQuestion(question: any): ValidationError[] {
+export function validateQuestion(question: QuestionImport): ValidationError[] {
   const errors: ValidationError[] = [];
 
   if (!question?.questionText || !String(question.questionText).trim()) {
@@ -15,7 +15,7 @@ export function validateQuestion(question: any): ValidationError[] {
   if (!question?.options || typeof question.options !== 'object') {
     errors.push({ field: 'options', message: 'Options must be an object' });
   } else {
-    const requiredOptions = ['A', 'B', 'C', 'D'];
+    const requiredOptions: Array<keyof QuestionImport['options']> = ['A', 'B', 'C', 'D'];
     for (const key of requiredOptions) {
       if (!question.options[key] || !String(question.options[key]).trim()) {
         errors.push({ field: `options.${key}`, message: `Option ${key} is required and cannot be empty` });

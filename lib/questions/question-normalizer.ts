@@ -1,4 +1,4 @@
-import { QuestionImport } from './question-schema';
+import type { QuestionImport } from './question-schema';
 
 export function normalizeQuestion(question: QuestionImport): QuestionImport {
   return {

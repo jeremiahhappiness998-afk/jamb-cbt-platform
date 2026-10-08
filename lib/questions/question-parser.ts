@@ -1,4 +1,4 @@
-import { questionFileSchema, QuestionImport } from './question-schema';
+import { questionFileSchema } from './question-schema';
 
 export function parseQuestionFile(raw: unknown) {
   const parsed = questionFileSchema.safeParse(raw);
@@ -11,5 +11,15 @@ export function parseQuestionFile(raw: unknown) {
       })),
     };
   }
-  return { success: true as const, data: parsed.data };
+  return {
+    success: true as const,
+    data: {
+      ...parsed.data,
+      questions: parsed.data.questions.map((question) => ({
+        ...question,
+        subject: parsed.data.subject,
+        year: parsed.data.year,
+      })),
+    },
+  };
 }

@@ -2,18 +2,19 @@ import { parseQuestionFile } from './question-parser';
 import { validateQuestion, ValidationError } from './question-validator';
 import { normalizeQuestion } from './question-normalizer';
 import { deduplicateQuestions } from './question-deduplicator';
+import type { QuestionImport } from './question-schema';
 
 export interface ImportResult {
   total: number;
   valid: number;
   duplicates: number;
   failed: number;
-  validQuestions: any[];
+  validQuestions: QuestionImport[];
   failedQuestions: Array<{
     questionNumber?: number;
     errors: ValidationError[];
   }>;
-  duplicateQuestions: any[];
+  duplicateQuestions: QuestionImport[];
 }
 
 export function importQuestionsFromFile(raw: unknown): ImportResult {
@@ -31,7 +32,7 @@ export function importQuestionsFromFile(raw: unknown): ImportResult {
     };
   }
 
-  const validQuestions: any[] = [];
+  const validQuestions: QuestionImport[] = [];
   const failedQuestions: Array<{ questionNumber?: number; errors: ValidationError[] }> = [];
 
   for (const question of parseResult.data.questions) {
@@ -63,7 +64,7 @@ export function importQuestionsFromFile(raw: unknown): ImportResult {
   };
 }
 
-function keyToString(question: any): string {
+function keyToString(question: QuestionImport): string {
   const subject = (question.subject || '').toLowerCase().replace(/\s+/g, ' ').trim();
   const text = (question.questionText || '').toLowerCase().replace(/\s+/g, ' ').trim();
   return `${subject}|${question.year ?? 0}|${question.questionNumber ?? 0}|${text}`;

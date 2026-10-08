@@ -1,10 +1,10 @@
 generator client {
-  provider = "postgresql"
+  provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -13,24 +13,20 @@ model User {
   name      String
   email     String   @unique
   password  String
-  role      Role     @default(STUDENT)
+  role      String   @default("STUDENT")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  attempts PracticeSession[]
-  exams    Exam[]
-}
-
-enum Role {
-  STUDENT
-  ADMIN
+  attempts     PracticeSession[]
+  examAttempts Attempt[]
+  exams        Exam[]
 }
 
 model Subject {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id        String     @id @default(cuid())
+  name      String     @unique
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
   topics    Topic[]
   questions Question[]
 }
@@ -54,118 +50,112 @@ model Subtopic {
 }
 
 model Question {
-  id            String     @id @default(cuid())
-  subjectId     String
-  topicId       String
-  subtopicId    String?
-  year          Int
+  id             String   @id @default(cuid())
+  subjectId      String
+  topicId        String
+  subtopicId     String?
+  year           Int
   questionNumber Int
-  questionText  String
-  optionA       String
-  optionB       String
-  optionC       String
-  optionD       String
-  correctOption String
-  explanation   String?
-  difficulty    String     @default("medium")
-  questionType  String     @default("TEXT")
-  imagePath     String?
-  source        String?
-  isActive      Boolean    @default(true)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  questionText   String
+  optionA        String
+  optionB        String
+  optionC        String
+  optionD        String
+  correctOption  String
+  explanation    String?
+  difficulty     String   @default("medium")
+  questionType   String   @default("TEXT")
+  imagePath      String?
+  source         String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  subject   Subject   @relation(fields: [subjectId], references: [id])
-  topic     Topic     @relation(fields: [topicId], references: [id])
-  subtopic  Subtopic? @relation(fields: [subtopicId], references: [id])
-  examQuestions ExamQuestion[]
+  subject         Subject          @relation(fields: [subjectId], references: [id])
+  topic           Topic            @relation(fields: [topicId], references: [id])
+  subtopic        Subtopic?        @relation(fields: [subtopicId], references: [id])
+  examQuestions   ExamQuestion[]
   practiceAnswers PracticeAnswer[]
-  attemptAnswers AttemptAnswer[]
+  attemptAnswers  AttemptAnswer[]
 }
 
 model Exam {
-  id            String        @id @default(cuid())
-  userId        String
-  user          User          @relation(fields: [userId], references: [id])
-  title         String
-  status        ExamStatus    @default(ACTIVE)
-  startedAt     DateTime      @default(now())
-  endedAt       DateTime?
-  duration      Int
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  title          String
+  status         String    @default("ACTIVE")
+  startedAt      DateTime  @default(now())
+  endedAt        DateTime?
+  duration       Int
   totalQuestions Int
-  score         Int?
-  createdAt     DateTime      @default(now())
+  score          Int?
+  createdAt      DateTime  @default(now())
 
-  questions     ExamQuestion[]
-  attempts      Attempt[]
-}
-
-enum ExamStatus {
-  ACTIVE
-  SUBMITTED
-  EXPIRED
+  questions ExamQuestion[]
+  attempts  Attempt[]
 }
 
 model ExamQuestion {
-  id         String   @id @default(cuid())
-  examId     String
-  questionId String
-  exam       Exam     @relation(fields: [examId], references: [id])
-  question   Question @relation(fields: [questionId], references: [id])
-  orderIndex Int
-  markedForReview Boolean @default(false)
-  createdAt  DateTime @default(now())
+  id              String   @id @default(cuid())
+  examId          String
+  questionId      String
+  exam            Exam     @relation(fields: [examId], references: [id])
+  question        Question @relation(fields: [questionId], references: [id])
+  orderIndex      Int
+  markedForReview Boolean  @default(false)
+  createdAt       DateTime @default(now())
 }
 
 model Attempt {
-  id         String   @id @default(cuid())
-  examId     String
-  exam       Exam     @relation(fields: [examId], references: [id])
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  startedAt  DateTime @default(now())
+  id          String    @id @default(cuid())
+  examId      String
+  exam        Exam      @relation(fields: [examId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  startedAt   DateTime  @default(now())
   submittedAt DateTime?
-  score      Int?
+  score       Int?
 }
 
 model AttemptAnswer {
-  id         String   @id @default(cuid())
-  attemptId  String
-  questionId String
-  question   Question @relation(fields: [questionId], references: [id])
+  id             String   @id @default(cuid())
+  attemptId      String
+  questionId     String
+  question       Question @relation(fields: [questionId], references: [id])
   selectedOption String?
-  isCorrect  Boolean?
-  createdAt  DateTime @default(now())
+  isCorrect      Boolean?
+  createdAt      DateTime @default(now())
 }
 
 model PracticeSession {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
   subject     String
   count       Int
-  startedAt   DateTime @default(now())
+  startedAt   DateTime         @default(now())
   completedAt DateTime?
   answers     PracticeAnswer[]
 }
 
 model PracticeAnswer {
-  id          String   @id @default(cuid())
-  sessionId   String
-  questionId  String
-  question    Question @relation(fields: [questionId], references: [id])
-  session     PracticeSession @relation(fields: [sessionId], references: [id])
+  id             String          @id @default(cuid())
+  sessionId      String
+  questionId     String
+  question       Question        @relation(fields: [questionId], references: [id])
+  session        PracticeSession @relation(fields: [sessionId], references: [id])
   selectedOption String?
-  correct     Boolean?
-  createdAt   DateTime @default(now())
+  correct        Boolean?
+  createdAt      DateTime        @default(now())
 }
 
 model UserProgress {
-  id               String   @id @default(cuid())
-  userId           String
-  subject          String
-  topic            String
-  correctCount     Int      @default(0)
-  attemptedCount    Int      @default(0)
-  lastUpdated      DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String
+  subject        String
+  topic          String
+  correctCount   Int      @default(0)
+  attemptedCount Int      @default(0)
+  lastUpdated    DateTime @updatedAt
 }

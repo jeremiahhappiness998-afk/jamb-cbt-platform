@@ -1,3 +1,5 @@
+import type { QuestionImport } from './question-schema';
+
 export interface DuplicateKey {
   subject: string;
   year: number;
@@ -9,7 +11,7 @@ function normalizeForDuplicateCheck(value: string): string {
   return value.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-function getDuplicateKey(question: any): DuplicateKey {
+function getDuplicateKey(question: QuestionImport): DuplicateKey {
   return {
     subject: normalizeForDuplicateCheck(question.subject || ''),
     year: question.year ?? 0,
@@ -22,9 +24,9 @@ function keyToString(key: DuplicateKey): string {
   return `${key.subject}|${key.year}|${key.questionNumber}|${key.questionTextNormalized}`;
 }
 
-export function deduplicateQuestions(questions: any[]) {
+export function deduplicateQuestions(questions: QuestionImport[]): QuestionImport[] {
   const seen = new Set<string>();
-  const unique: any[] = [];
+  const unique: QuestionImport[] = [];
 
   for (const question of questions) {
     const key = getDuplicateKey(question);

@@ -3,13 +3,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+type ImportSummary = {
+  total: number;
+  valid: number;
+  duplicates: number;
+  failed: number;
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [fileName, setFileName] = useState('');
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -22,7 +28,6 @@ export default function AdminPage() {
 
       const data = await response.json();
       const isUserAdmin = data.user?.role === 'ADMIN';
-      setIsAdmin(isUserAdmin);
       if (!isUserAdmin) {
         router.replace('/dashboard');
         return;

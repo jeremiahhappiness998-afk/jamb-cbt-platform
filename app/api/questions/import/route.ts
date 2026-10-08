@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser, requireAdmin } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 import { importQuestionsFromFile } from '@/lib/questions/question-importer';
 
 export async function POST(request: NextRequest) {

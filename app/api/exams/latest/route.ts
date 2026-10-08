@@ -1,30 +1,46 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
-export async function POST(request: NextRequest) {
-  const token = request.cookies.get('auth_token')?.value;
-  const user = token ? await verifyToken(token) : null;
-
-  if (!user || !user.sub) {
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await request.json();
-  const subjectName = String(body.subject || 'Biology');
-  const count = Number(body.count || 10);
-
-  const subject = await prisma.subject.findFirst({ where: { name: subjectName } });
-  if (!subject) {
-    return NextResponse.json({ error: 'Subject not found' }, { status: 404 });
-  }
-
-  const questions = await prisma.question.findMany({
-    where: { subjectId: subject.id, isActive: true },
-    take: count,
+  const attempt = await prisma.attempt.findFirst({
+    where: { userId: user.id },
+    orderBy: { startedAt: 'desc' },
+    include: { exam: true },
   });
 
-  return NextResponse.json({ success: true, subject, questions });
+  if (!attempt) {
+    return NextResponse.json({ error: 'No exam attempt found' }, { status: 404 });
+  }
+
+  const answers = await prisma.attemptAnswer.findMany({
+    where: { attemptId: `exam:${attempt.examId}` },
+    select: { selectedOption: true, isCorrect: true },
+  });
+
+  const answerScore = answers.filter((answer) => answer.isCorrect).length;
+  const correct = attempt.score ?? (
+    attempt.exam.status === 'SUBMITTED' ? attempt.exam.score ?? answerScore : answerScore
+  );
+  const answered = answers.filter((answer) => answer.selectedOption !== null).length;
+  const wrong = answers.filter((answer) => answer.selectedOption !== null && answer.isCorrect === false).length;
+  const totalQuestions = attempt.exam.totalQuestions;
+
+  return NextResponse.json({
+    result: {
+      percentage: totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0,
+      correct,
+      totalQuestions,
+      wrong,
+      unanswered: Math.max(totalQuestions - answered, 0),
+      status: attempt.exam.status,
+    },
+  });
 }
 
 
@@ -666,4 +682,3 @@ export async function POST(request: NextRequest) {
 
 
 
-"}]}

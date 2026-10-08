@@ -2,8 +2,17 @@
 
 import { useEffect, useState } from 'react';
 
+type ExamResult = {
+  percentage: number;
+  correct: number;
+  totalQuestions: number;
+  wrong: number;
+  unanswered: number;
+  status: string;
+};
+
 export default function ResultsPage() {
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ExamResult | null>(null);
 
   useEffect(() => {
     async function loadResult() {

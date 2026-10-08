@@ -1,10 +1,20 @@
-import { createSecretKey } from 'crypto';
+import { createSecretKey, randomBytes } from 'crypto';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { prisma } from './db';
 
 const getAuthSecret = () => {
   const secret = process.env.AUTH_SECRET;
+  if (secret) {
+    return secret;
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    const globalForAuth = globalThis as typeof globalThis & { localAuthSecret?: string };
+    globalForAuth.localAuthSecret ??= randomBytes(32).toString('hex');
+    return globalForAuth.localAuthSecret;
+  }
+
   if (!secret) {
     throw new Error(
       'AUTH_SECRET environment variable is not set. '
