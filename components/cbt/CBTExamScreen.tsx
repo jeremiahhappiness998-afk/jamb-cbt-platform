@@ -1,8 +1,10 @@
+
 'use client';
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -39,10 +41,11 @@ export type ActiveExam = {
   id: string;
   title: string;
   totalQuestions: number;
+  duration: number;
+  startedAt: string;
   questions: CBTQuestion[];
 };
 
-const DEFAULT_EXAM_DURATION_SECONDS = 60 * 60;
 const LOW_TIME_WARNING_SECONDS = 10 * 60;
 
 type TimerState = {
@@ -142,9 +145,11 @@ export function ExamError({
 function CBTHeader({
   title,
   timer,
+  onFinishExam,
 }: {
   title: string;
   timer: TimerState;
+  onFinishExam: () => void;
 }) {
   const { remainingSeconds, isTimeExpired } = timer;
 
@@ -200,9 +205,8 @@ function CBTHeader({
 
           <button
             type="button"
-            disabled
-            title="Exam submission is not available yet"
-            className="min-h-10 rounded-md border border-emerald-700 bg-emerald-900 px-3 text-sm font-semibold text-emerald-100 opacity-75 disabled:cursor-not-allowed sm:px-4"
+            onClick={onFinishExam}
+            className="min-h-10 rounded-md border border-emerald-600 bg-emerald-800 px-3 text-sm font-semibold text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-950 sm:px-4"
           >
             Finish Exam
           </button>
@@ -496,11 +500,19 @@ export function CBTExamScreen({
 }: {
   exam: ActiveExam;
 }) {
-  const examDeadline = useMemo(
-    () => Date.now() + DEFAULT_EXAM_DURATION_SECONDS * 1000,
-    [],
-  );
+  const router = useRouter();
+  const confirmationDialogRef = useRef<HTMLDialogElement>(null);
 
+  // Calculate the deadline from the exam's saved start time and duration.
+  // The duration is stored in seconds.
+  const examDeadline = useMemo(() => {
+    const startedAt = new Date(exam.startedAt).getTime();
+    const durationMs = Math.max(0, exam.duration) * 1000;
+
+    return startedAt + durationMs;
+  }, [exam.startedAt, exam.duration]);
+
+  // There must be only one timer state declaration.
   const [timer, setTimer] = useState<TimerState>(() => {
     const remainingSeconds = Math.max(
       0,
@@ -520,18 +532,93 @@ export function CBTExamScreen({
     markedForReview: {},
   });
 
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
+
   const total = exam.questions.length;
 
   const currentQuestionIndex = Math.max(
     0,
-    Math.min(
-      state.currentQuestionIndex,
-      Math.max(total - 1, 0),
-    ),
+    Math.min(state.currentQuestionIndex, Math.max(total - 1, 0)),
   );
 
   const question = exam.questions[currentQuestionIndex];
 
+  const answeredCount = exam.questions.filter((item) =>
+    Boolean(state.answers[item.id]),
+  ).length;
+
+  const unansweredCount = Math.max(total - answeredCount, 0);
+
+  useEffect(() => {
+    const dialog = confirmationDialogRef.current;
+
+    if (!dialog) return;
+
+    if (isConfirmationOpen && !dialog.open) {
+      dialog.showModal();
+    } else if (!isConfirmationOpen && dialog.open) {
+      dialog.close();
+    }
+  }, [isConfirmationOpen]);
+
+  function openConfirmation() {
+    setSubmissionError('');
+    setIsConfirmationOpen(true);
+  }
+
+  async function submitExam() {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmissionError('');
+
+    try {
+      const answers = exam.questions.flatMap((item) => {
+        const selectedOption = state.answers[item.id];
+
+        return selectedOption
+          ? [{ questionId: item.id, selectedOption }]
+          : [];
+      });
+
+      const response = await fetch(
+        `/api/exams/${encodeURIComponent(exam.id)}/submit`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ answers }),
+        },
+      );
+
+      if (!response.ok) {
+        const data: { error?: string } = await response
+          .json()
+          .catch(() => ({}));
+
+        setSubmissionError(
+          data.error ||
+            'Unable to submit examination. Please try again.',
+        );
+
+        return;
+      }
+
+      setIsConfirmationOpen(false);
+      router.push(`/results/${exam.id}`);
+    } catch {
+      setSubmissionError(
+        'Unable to submit examination. Check the local app connection and try again.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  // Update the timer every second using the original exam deadline.
   useEffect(() => {
     function updateTimer() {
       const remainingSeconds = Math.max(
@@ -610,18 +697,17 @@ export function CBTExamScreen({
     navigateTo(currentQuestionIndex + 1);
   }
 
+  // Keyboard shortcuts for selecting answers and navigating questions.
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       const target = event.target;
 
       if (
         target instanceof HTMLElement &&
-        (
-          target.isContentEditable ||
+        (target.isContentEditable ||
           target.closest(
             'input, textarea, select, [contenteditable="true"]',
-          )
-        )
+          ))
       ) {
         return;
       }
@@ -630,14 +716,13 @@ export function CBTExamScreen({
         return;
       }
 
+      if (isConfirmationOpen) {
+        return;
+      }
+
       const key = event.key.toLowerCase();
 
-      if (
-        key === 'a' ||
-        key === 'b' ||
-        key === 'c' ||
-        key === 'd'
-      ) {
+      if (key === 'a' || key === 'b' || key === 'c' || key === 'd') {
         event.preventDefault();
 
         const answer = key.toUpperCase() as AnswerChoice;
@@ -677,7 +762,7 @@ export function CBTExamScreen({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [question, timer.isTimeExpired, total]);
+  }, [isConfirmationOpen, question, timer.isTimeExpired, total]);
 
   if (!question) {
     return (
@@ -696,6 +781,7 @@ export function CBTExamScreen({
       <CBTHeader
         title={exam.title.replace(/\s+Exam$/, '')}
         timer={timer}
+        onFinishExam={openConfirmation}
       />
 
       {timer.isTimeExpired ? (
@@ -703,8 +789,8 @@ export function CBTExamScreen({
           role="alert"
           className="border-b border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-semibold text-red-900"
         >
-          Your examination time has expired. Submission and scoring will be
-          handled in a later phase.
+          Your examination time has expired. Please finish submitting your
+          examination.
         </div>
       ) : timer.remainingSeconds <= LOW_TIME_WARNING_SECONDS ? (
         <div
@@ -731,7 +817,7 @@ export function CBTExamScreen({
             <p>
               Answered:{' '}
               <span className="font-semibold text-slate-800">
-                {Object.keys(state.answers).length}
+                {answeredCount}
               </span>
               {' / '}
               {total}
@@ -740,7 +826,10 @@ export function CBTExamScreen({
             <p className="mt-1">
               Marked:{' '}
               <span className="font-semibold text-slate-800">
-                {Object.values(state.markedForReview).filter(Boolean).length}
+                {
+                  Object.values(state.markedForReview).filter(Boolean)
+                    .length
+                }
               </span>
             </p>
           </div>
@@ -801,6 +890,98 @@ export function CBTExamScreen({
           </div>
         </details>
       </main>
+
+      <dialog
+        ref={confirmationDialogRef}
+        aria-labelledby="submit-exam-title"
+        aria-describedby="submit-exam-description"
+        onClose={() => setIsConfirmationOpen(false)}
+        onCancel={(event) => {
+          if (isSubmitting) event.preventDefault();
+        }}
+        className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-950/60"
+      >
+        <section className="p-5 sm:p-7">
+          <h2
+            id="submit-exam-title"
+            className="text-xl font-bold text-slate-950"
+          >
+            Submit Examination?
+          </h2>
+
+          <p
+            id="submit-exam-description"
+            className="mt-2 text-sm leading-6 text-slate-600"
+          >
+            Review your progress before submitting this examination.
+          </p>
+
+          <dl className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <dt className="text-xs font-semibold uppercase text-emerald-900">
+                Answered
+              </dt>
+              <dd className="mt-1 text-2xl font-bold text-emerald-950">
+                {answeredCount}
+              </dd>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <dt className="text-xs font-semibold uppercase text-slate-700">
+                Unanswered
+              </dt>
+              <dd className="mt-1 text-2xl font-bold text-slate-950">
+                {unansweredCount}
+              </dd>
+            </div>
+          </dl>
+
+          {unansweredCount > 0 ? (
+            <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-950">
+              You still have {unansweredCount} unanswered{' '}
+              {unansweredCount === 1 ? 'question' : 'questions'}.
+              Unanswered questions will be submitted without an answer.
+            </p>
+          ) : null}
+
+          {submissionError ? (
+            <p
+              role="alert"
+              className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-800"
+            >
+              {submissionError}
+            </p>
+          ) : null}
+
+          <div className="mt-6 flex flex-col-reverse justify-end gap-3 sm:flex-row">
+            <button
+              type="button"
+              autoFocus
+              disabled={isSubmitting}
+              onClick={() => setIsConfirmationOpen(false)}
+              className="min-h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={submitExam}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? (
+                <LoaderCircle
+                  className="h-4 w-4 animate-spin"
+                  aria-hidden="true"
+                />
+              ) : null}
+
+              {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+            </button>
+          </div>
+        </section>
+      </dialog>
     </div>
   );
 }

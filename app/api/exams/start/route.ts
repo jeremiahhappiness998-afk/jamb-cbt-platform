@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           title: `${subject.name} Exam`,
           status: 'ACTIVE',
-          duration: 1500,
+          duration: 120 * 60,
           totalQuestions: questions.length,
           questions: {
             create: questions.map((question, orderIndex) => ({

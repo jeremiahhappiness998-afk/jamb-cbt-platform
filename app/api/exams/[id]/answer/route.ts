@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         userId: String(userPayload.sub),
         title: subjectFilter ? `${subjectFilter} Practice Exam` : 'Real CBT Simulation',
         status: 'ACTIVE',
-        duration: 1500,
+        duration: 120 * 60,
         totalQuestions: questions.length,
         startedAt: new Date(),
         score: 0,
